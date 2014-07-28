@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $PLUSHU_TRACE ]] && set -x
+
+templates_dir=$PLUSHU_ROOT/plugins/$PLUSHU_PLUGIN_NAME/templates
+
+echo_install_information () {
+  local distro=""
+  if [[ -f /etc/os-release ]]; then
+   distro=`sed -n 's/^ID=\(.*\)$/\1/p' /etc/os-release`
+  fi
+  case $distro in
+    arch)
+      cat <<"EOF"
+To install Nginx on Arch Linux, run
+
+# pacman -S nginx
+EOF
+      ;;
+    ubuntu)
+      cat <<"EOF"
+To install the latest stable Nginx 1.4.x with WebSocket support, run
+
+# add-apt-repository -y ppa:nginx/stable
+# apt-get update
+# apt-get install -y nginx dnsutils
+
+See http://wiki.nginx.org/Install#Ubuntu_PPA for more info.
+EOF
+      ;;
+    *)
+      cat <<"EOF"
+Look up how to install Nginx on your system:
+  http://wiki.nginx.org/Install
+EOF
+      ;;
+  esac
+}
+
+setup_sudoers () {
+  if [[ $EUID == 0 ]]; then
+    if fgrep -qx '#includedir /etc/sudoers.d' /etc/sudoers; then
+      echo "/etc/sudoers includes /etc/sudoers.d... good."
+      echo "Installing plushu-reload-nginx rule as a file in sudoers.d."
+      install -m0440 $templates_dir/sudoers/plushu-reload-nginx \
+        /etc/sudoers.d/plushu-reload-nginx
+    else
+      echo "Your /etc/sudoers doesn't include /etc/sudoers.d."
+      included_dirs=`sed -n 's/^#includedir\s*//p' /etc/sudoers`
+      if [[ -n "$included_dirs" ]]; then
+        echo "It does include these directories:"
+        echo
+        echo "$included_dirs"
+        echo
+        echo "Please post an issue, including which distribution you are"
+        echo "installing on and which directories it includes, at:"
+        echo "https://github.com/plushu/plushu-nginx-vhost/issues"
+        echo
+      fi
+
+      echo "This is a common directive in most modern sudo configurations"
+      echo "(Debian has shipped with it since 1.7.2p1-1 in 2009)."
+      echo "Either add this line to your configuration:"
+      echo
+      echo "#includedir /etc/sudoers.d"
+      echo
+      echo "and then reinstall this plugin (as root) to install the file for"
+      echo "the relevant directive to reload Nginx, or add the line for"
+      echo "the directive to /etc/sudoers directly:"
+      echo
+      echo "%plushu ALL=(ALL)NOPASSWD:nginx -s reload"
+      echo
+    fi
+  else
+    echo "The plushu user needs to be granted sudoers permission"
+    echo "to reload the Nginx configuration."
+    echo "To create it, reinstall this plugin as root, or add"
+    echo "this line to your sudoers configuration:"
+    echo
+    echo "%plushu ALL=(ALL)NOPASSWD:nginx -s reload"
+    echo
+  fi
+}
+
+check_for_sudo () {
+  if command -v sudo >/dev/null 2>&1; then
+    echo "sudo appears to be installed... good."
+    setup_sudoers
+  else
+    echo "sudo needs to be installed for this user to reload nginx."
+    # If you're using a distro that doesn't come with sudo, you don't need me
+    # to explain how to install it to you
+    echo "Install sudo, then reinstall this plugin."
+  fi
+}
+
+check_nginx_run_status () {
+  if command -v systemctl >/dev/null 2>&1; then
+    if systemctl -q is-enabled nginx.service; then
+      echo "Nginx is enabled via systemctl... good."
+    else
+      echo "Nginx does not appear to be enabled. Enable it with:"
+      echo
+      echo "# systemctl enable nginx.service"
+      echo
+    fi
+    if systemctl -q is-active nginx.service; then
+      echo "Nginx is currently running... good."
+    else
+      echo "Nginx does not appear to be currently running. Start it with:"
+      echo
+      echo "# systemctl start nginx.service"
+      echo
+    fi
+  else
+    if pgrep -x nginx >/dev/null 2>&1; then
+      echo "Nginx appears to be running... good."
+    else
+      echo "Nginx doesn't appear to be running."
+      echo "You should start it with something like:"
+      echo
+      echo "# service start nginx"
+      echo
+    fi
+    echo "Make sure Nginx is set to run automatically at startup."
+  fi
+}
+
+write_nginx_conf () {
+  if [[ $EUID == 0 ]]; then
+    echo "Installing Nginx config file for Plushu..."
+    # we assume Nginx is configured to include /etc/nginx/conf.d/*.conf
+    # without checking, because it's an established default
+    echo "include $PLUSHU_ROOT/nginx.conf.d/*;" > /etc/nginx/conf.d/plushu.conf
+  else
+    echo "plushu-nginx uses a directory in the Plushu root to allow"
+    echo "Plushu plugins to configure Nginx. Reinstall this plugin as root to"
+    echo "add a file for this integration, or add this line to your Nginx"
+    echo "configuration:"
+    echo
+    echo "include $PLUSHU_ROOT/nginx.conf.d/*;"
+    echo
+  fi
+}
+
+# if Nginx is present
+if command -v nginx >/dev/null 2>&1; then
+  echo "Nginx appears to be installed... good."
+  check_nginx_run_status
+  check_for_sudo
+  write_nginx_conf
+else
+  echo "Nginx does not appear to be installed."
+  echo_install_information
+fi

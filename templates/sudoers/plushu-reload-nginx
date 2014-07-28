@@ -1,0 +1,1 @@
+%plushu ALL=(ALL)NOPASSWD:nginx -s reload
