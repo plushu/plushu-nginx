@@ -131,6 +131,7 @@ write_nginx_conf () {
     # we assume Nginx is configured to include /etc/nginx/conf.d/*.conf
     # without checking, because it's an established default
     echo "include $PLUSHU_ROOT/nginx.conf.d/*;" > /etc/nginx/conf.d/plushu.conf
+    mkdir -p "$PLUSHU_ROOT/nginx.conf.d"
   else
     echo "plushu-nginx uses a directory in the Plushu root to allow"
     echo "Plushu plugins to configure Nginx. Reinstall this plugin as root to"
