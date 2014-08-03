@@ -127,10 +127,11 @@ check_nginx_run_status () {
 
 write_nginx_conf () {
   if [[ $EUID == 0 ]]; then
-    echo "Installing Nginx config file for Plushu..."
-    # we assume Nginx is configured to include /etc/nginx/conf.d/*.conf
-    # without checking, because it's an established default
-    echo "include $PLUSHU_ROOT/nginx.conf.d/*;" > /etc/nginx/conf.d/plushu.conf
+    include_directive="include $PLUSHU_ROOT/nginx.conf.d/*; # plushu-nginx"
+    if ! fgrep -qx "$include_directive" /etc/nginx/nginx.conf; then
+      echo "Including Plushu config files in Nginx configuration..."
+      echo "$include_directive" >> /etc/nginx/nginx.conf
+    fi
     mkdir -p "$PLUSHU_ROOT/nginx.conf.d"
   else
     echo "plushu-nginx uses a directory in the Plushu root to allow"
