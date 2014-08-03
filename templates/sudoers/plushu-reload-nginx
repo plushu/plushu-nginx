@@ -1,1 +1,1 @@
-%plushu ALL=(ALL)NOPASSWD:nginx -s reload
+plushu ALL=(ALL)NOPASSWD:/usr/bin/nginx -s reload
