@@ -127,10 +127,10 @@ check_nginx_run_status () {
 
 write_nginx_conf () {
   if [[ $EUID == 0 ]]; then
-    include_directive="include $PLUSHU_ROOT/nginx.conf.d/*; # plushu-nginx"
-    if ! fgrep -qx "$include_directive" /etc/nginx/nginx.conf; then
+    includeblock="http {include $PLUSHU_ROOT/nginx.conf.d/*;} # plushu-nginx"
+    if ! fgrep -q "# plushu-nginx" /etc/nginx/nginx.conf; then
       echo "Including Plushu config files in Nginx configuration..."
-      echo "$include_directive" >> /etc/nginx/nginx.conf
+      echo "$includeblock" >> /etc/nginx/nginx.conf
     fi
     mkdir -p "$PLUSHU_ROOT/nginx.conf.d"
   else
@@ -139,7 +139,7 @@ write_nginx_conf () {
     echo "add a file for this integration, or add this line to your Nginx"
     echo "configuration:"
     echo
-    echo "include $PLUSHU_ROOT/nginx.conf.d/*;"
+    echo "$includeblock"
     echo
   fi
 }
