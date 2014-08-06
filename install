@@ -125,21 +125,101 @@ check_nginx_run_status () {
   fi
 }
 
-write_nginx_conf () {
-  if [[ $EUID == 0 ]]; then
-    includeblock="http {include $PLUSHU_ROOT/nginx.conf.d/*;} # plushu-nginx"
-    if ! fgrep -q "# plushu-nginx" /etc/nginx/nginx.conf; then
-      echo "Including Plushu config files in Nginx configuration..."
-      echo "$includeblock" >> /etc/nginx/nginx.conf
+nginx_plushu_conf="include $PLUSHU_ROOT/nginx/nginx.conf;"
+
+eat_nginx_conf () {
+  local http_depth=0;
+  local braces;
+
+  # File we save existing http block content to
+  local existing_save=$PLUSHU_ROOT/nginx/http/existing.conf.save
+
+  # Parsing routine for lines when inside the http block
+  inside_http_block () {
+
+    # Update depth in the http block according to balanced braces
+    braces=`echo "$1" | tr -cd {}`
+    # For each brace on this line
+    for (( i=0; i<${#braces}; i++ )); do
+      # Increase our block depth if it's an open-brace
+      if [[ ${braces:$i:1} == '{' ]]; then
+        ((http_depth++))
+      # Reduce our block depth if it's a close brace
+      else
+        ((http_depth--))
+        # Stop here if we've exited the http block
+        if (( $http_depth == 0 )); then
+          break
+        fi
+      fi
+    done
+
+    # If we exited the http block
+    if (( $http_depth == 0 )); then
+      # Replace braces with a regex matching all the text before this brace
+      braces=`echo ${braces:0:$i} | sed 's/./.*?&/g'`
+      # Write everything before this brace to the existing http save
+      echo "$1" | sed "s/^\($braces\).*/\1/" >>"$existing_save"
+      # Parse everything after this brace as a line outside of the block
+      outside_http_block `echo "$1" | sed "s/^$braces}//g"`
+      break
+    # If this whole line was within the http block
+    else
+      # Write the line to the existing http save
+      echo "$1" >>"$existing_save"
     fi
-    mkdir -p "$PLUSHU_ROOT/nginx.conf.d"
+  }
+
+  # Parsing routine for lines when outside the http block
+  outside_http_block() {
+    # If this line enters the http block
+    if echo "$1" | grep -q 'http *{'; then
+      # Write everything before the start of the block to the config
+      echo "$1" | sed 's/http *{.*//' >>"$PLUSHU_ROOT/nginx/nginx.conf"
+      # Increment the http block depth
+      ((http_depth++))
+      # Continue parsing within the http block
+      inside_http_block `echo "$1" | sed "s/^.*http *{//g"`
+    else
+    # Write all directives outside the http block to the config
+      echo "$1" >>"$PLUSHU_ROOT/nginx/nginx.conf"
+    fi
+  }
+
+  # Parse every line of the existing nginx.conf
+  while read -r line; do
+    if (( $http_depth > 0 )); then
+      inside_http_block "$line"
+    else
+      outside_http_block "$line"
+    fi
+  done </etc/nginx/nginx.conf
+
+  # Add an http block to our new conf
+  echo "http { include $PLUSHU_ROOT/nginx/http/*.conf; }" \
+    >>"$PLUSHU_ROOT/nginx/nginx.conf"
+
+  # Overwrite the existing configuration (which we just ate)
+  # with one that includes the Plushu one
+  echo "$nginx_plushu_conf" >/etc/nginx/nginx.conf
+}
+setup_nginx_conf () {
+  mkdir -p "$PLUSHU_ROOT/nginx/http"
+  if [[ $EUID == 0 ]]; then
+    if [[ "$(</etc/nginx/nginx.conf)" != "$nginx_plushu_conf" ]]; then
+      echo "Configuring Nginx to read from Plushu..."
+      eat_nginx_conf
+    fi
   else
-    echo "plushu-nginx uses a directory in the Plushu root to allow"
-    echo "Plushu plugins to configure Nginx. Reinstall this plugin as root to"
-    echo "add a file for this integration, or add this line to your Nginx"
-    echo "configuration:"
+    echo "plushu-nginx moves the Nginx configuration to the Plushu root so"
+    echo "Plushu plugins can configure Nginx. Reinstall this plugin as root to"
+    echo "perform this replacement."
     echo
-    echo "$includeblock"
+    echo "If you wish to integrate Plushu into your existing Nginx setup"
+    echo "rather than having Plushu control it, add this line to your"
+    echo "http block in /etc/nginx/nginx.conf:"
+    echo
+    echo "    include $PLUSHU_ROOT/nginx/http/*.conf;"
     echo
   fi
 }
@@ -149,7 +229,7 @@ if command -v nginx >/dev/null 2>&1; then
   echo "Nginx appears to be installed... good."
   check_nginx_run_status
   check_for_sudo
-  write_nginx_conf
+  setup_nginx_conf
 else
   echo "Nginx does not appear to be installed."
   echo_install_information
