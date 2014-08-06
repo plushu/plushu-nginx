@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $PLUSHU_TRACE ]] && set -x
+
+nginx_plushu_conf="include $PLUSHU_ROOT/nginx/nginx.conf;"
+existing_save="$PLUSHU_ROOT/nginx/http/existing.conf.save"
+
+if [[ $EUID == 0 ]]; then
+  rm /etc/sudoers.d/plushu-reload-nginx
+  if [[ "$(</etc/nginx/nginx.conf)" == "$nginx_plushu_conf" ]]; then
+    while read -r line; do
+      if [[ "$line" == "http { include $PLUSHU_ROOT/nginx/http/*.conf; }" ]]
+      then
+        if [[ -f "$PLUSHU_ROOT/nginx/http/existing.conf.save" ]]; then
+          echo "http {"
+          cat "$existing_save"
+          echo "}"
+        fi
+      else
+        echo "$line"
+      fi
+    done <"$PLUSHU_ROOT/nginx/nginx.conf" >/etc/nginx/nginx.conf
+  fi
+else
+  echo "Not uninstalling anything because this plugin isn't being uninstalled"
+  echo "as root. Be sure to clean up your /etc/sudoers configuration and"
+  echo "Nginx configuration."
+fi
