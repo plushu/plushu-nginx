@@ -2,7 +2,9 @@
 set -eo pipefail; [[ $PLUSHU_TRACE ]] && set -x
 
 nginx_plushu_conf="include $PLUSHU_ROOT/nginx/nginx.conf;"
-existing_save="$PLUSHU_ROOT/nginx/http/existing.conf.save"
+
+# For instances where a glob has no matches we want an empty list
+shopt -s nullglob
 
 if [[ $EUID == 0 ]]; then
   rm /etc/sudoers.d/plushu-reload-nginx
@@ -10,7 +12,7 @@ if [[ $EUID == 0 ]]; then
     while read -r line; do
       if [[ "$line" == "http { include $PLUSHU_ROOT/nginx/http/*.conf; }" ]]
       then
-        if [[ -f "$PLUSHU_ROOT/nginx/http/existing.conf.save" ]]; then
+        for existing_save in "$PLUSHU_ROOT/nginx/http"/existing*.conf.save
           echo "http {"
           cat "$existing_save"
           echo "}"

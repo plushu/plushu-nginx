@@ -128,11 +128,12 @@ check_nginx_run_status () {
 nginx_plushu_conf="include $PLUSHU_ROOT/nginx/nginx.conf;"
 
 eat_nginx_conf () {
-  local http_depth=0;
-  local braces;
+  local http_depth=0
+  local braces
 
   # File we save existing http block content to
   local existing_save=$PLUSHU_ROOT/nginx/http/existing.conf.save
+  local http_blocks=0
 
   # Parsing routine for lines when inside the http block
   inside_http_block () {
@@ -162,7 +163,8 @@ eat_nginx_conf () {
       echo "$1" | sed "s/^\($braces\).*/\1/" >>"$existing_save"
       # Parse everything after this brace as a line outside of the block
       outside_http_block `echo "$1" | sed "s/^$braces}//g"`
-      break
+      # Use a different filename for the next http block, if any
+      existing_save=$PLUSHU_ROOT/nginx/http/existing.$((http_blocks)).conf.save
     # If this whole line was within the http block
     else
       # Write the line to the existing http save
@@ -176,8 +178,9 @@ eat_nginx_conf () {
     if echo "$1" | grep -q 'http *{'; then
       # Write everything before the start of the block to the config
       echo "$1" | sed 's/http *{.*//' >>"$PLUSHU_ROOT/nginx/nginx.conf"
-      # Increment the http block depth
+      # Increment the http block depth and number of blocks
       ((http_depth++))
+      ((http_blocks++))
       # Continue parsing within the http block
       inside_http_block `echo "$1" | sed "s/^.*http *{//g"`
     else
