@@ -139,7 +139,7 @@ eat_nginx_conf () {
   inside_http_block () {
 
     # Update depth in the http block according to balanced braces
-    braces=`echo "$1" | tr -cd {}`
+    braces=`tr -cd {} <<<"$1"`
     # For each brace on this line
     for (( i=0; i<${#braces}; i++ )); do
       # Increase our block depth if it's an open-brace
@@ -158,34 +158,34 @@ eat_nginx_conf () {
     # If we exited the http block
     if (( $http_depth == 0 )); then
       # Replace braces with a regex matching all the text before this brace
-      braces=`echo ${braces:0:$i} | sed 's/./.*?&/g'`
+      braces=`sed 's/./.*?&/g' <<<"${braces:0:$i}"`
       # Write everything before this brace to the existing http save
-      echo "$1" | sed "s/^\($braces\).*/\1/" >>"$existing_save"
+      sed "s/^\($braces\).*/\1/" <<<"$1" >>"$existing_save"
       # Parse everything after this brace as a line outside of the block
-      outside_http_block `echo "$1" | sed "s/^$braces}//g"`
+      outside_http_block `sed "s/^$braces}//g" <<<"$1"`
       # Use a different filename for the next http block, if any
       existing_save=$PLUSHU_ROOT/nginx/http/existing.$((http_blocks)).conf.save
     # If this whole line was within the http block
     else
       # Write the line to the existing http save
-      echo "$1" >>"$existing_save"
+      printf '%s\n' "$1" >>"$existing_save"
     fi
   }
 
   # Parsing routine for lines when outside the http block
   outside_http_block() {
     # If this line enters the http block
-    if echo "$1" | grep -q 'http *{'; then
+    if grep -q 'http *{' <<<"$1"; then
       # Write everything before the start of the block to the config
-      echo "$1" | sed 's/http *{.*//' >>"$PLUSHU_ROOT/nginx/nginx.conf"
+      sed 's/http *{.*//' <<<"$1" >>"$PLUSHU_ROOT/nginx/nginx.conf"
       # Increment the http block depth and number of blocks
       ((http_depth++))
       ((http_blocks++))
       # Continue parsing within the http block
-      inside_http_block `echo "$1" | sed "s/^.*http *{//g"`
+      inside_http_block `sed 's/^.*http *{//g' <<<"$1"`
     else
     # Write all directives outside the http block to the config
-      echo "$1" >>"$PLUSHU_ROOT/nginx/nginx.conf"
+      printf '%s\n' "$1" >>"$PLUSHU_ROOT/nginx/nginx.conf"
     fi
   }
 
@@ -199,12 +199,12 @@ eat_nginx_conf () {
   done </etc/nginx/nginx.conf
 
   # Add an http block to our new conf
-  echo "http { include $PLUSHU_ROOT/nginx/http/*.conf; }" \
+  printf '%s\n' "http { include $PLUSHU_ROOT/nginx/http/*.conf; }" \
     >>"$PLUSHU_ROOT/nginx/nginx.conf"
 
   # Overwrite the existing configuration (which we just ate)
   # with one that includes the Plushu one
-  echo "$nginx_plushu_conf" >/etc/nginx/nginx.conf
+  printf '%s\n' "$nginx_plushu_conf" >/etc/nginx/nginx.conf
 }
 setup_nginx_conf () {
   mkdir -p "$PLUSHU_ROOT/nginx/http"
