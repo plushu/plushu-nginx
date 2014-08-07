@@ -129,7 +129,7 @@ nginx_plushu_conf="include $PLUSHU_ROOT/nginx/nginx.conf;"
 
 eat_nginx_conf () {
   local http_depth=0
-  local braces
+  local quote=
 
   # File we save existing http block content to
   local existing_save=$PLUSHU_ROOT/nginx/http/existing.conf.save
@@ -138,31 +138,54 @@ eat_nginx_conf () {
   # Parsing routine for lines when inside the http block
   inside_http_block () {
 
-    # Update depth in the http block according to balanced braces
-    braces=`tr -cd {} <<<"$1"`
-    # For each brace on this line
-    for (( i=0; i<${#braces}; i++ )); do
-      # Increase our block depth if it's an open-brace
-      if [[ ${braces:$i:1} == '{' ]]; then
-        ((http_depth++))
-      # Reduce our block depth if it's a close brace
-      else
-        ((http_depth--))
-        # Stop here if we've exited the http block
-        if (( $http_depth == 0 )); then
-          break
+    # For each character on this line
+    for (( i=0; i<${#1}; i++ )); do
+
+      # Skip any backslash-escaped character
+      if [[ "${1:$i:1}" == "\\" ]]; then
+        ((i++))
+
+      # If we are within a string
+      elif [[ -n "$quote" ]]; then
+        # If this is the closing quote
+        if [[ "${1:$i:1}" == "$quote" ]]; then
+          # Clear the open-quote marker
+          quote=
         fi
+
+      # If we are not currently in a string
+      else
+        case "${1:$i:1}" in
+        # Increase our block depth if it's an open-brace
+        '{')
+          ((http_depth++))
+          ;;
+        # Reduce our block depth if it's a close brace
+        '}')
+          ((http_depth--))
+          # Stop here if we've exited the http block
+          if (( $http_depth == 0 )); then
+            break
+          fi
+          ;;
+        # Enter string if it's a quote
+        '"'|"'")
+          quote="${1:$i:1}"
+          ;;
+        # Stop parsing if it's a comment
+        '#')
+          break
+          ;;
+        esac
       fi
     done
 
     # If we exited the http block
     if (( $http_depth == 0 )); then
-      # Replace braces with a regex matching all the text before this brace
-      braces=`sed 's/./.*?&/g' <<<"${braces:0:$i}"`
       # Write everything before this brace to the existing http save
-      sed "s/^\($braces\).*/\1/" <<<"$1" >>"$existing_save"
+      printf '%s\n' "${1:0:i}" >>"$existing_save"
       # Parse everything after this brace as a line outside of the block
-      outside_http_block `sed "s/^$braces}//g" <<<"$1"`
+      outside_http_block "${1:$((i+1))}"
       # Use a different filename for the next http block, if any
       existing_save=$PLUSHU_ROOT/nginx/http/existing.$((http_blocks)).conf.save
     # If this whole line was within the http block
