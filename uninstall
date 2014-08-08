@@ -21,7 +21,7 @@ if [[ $EUID == 0 ]]; then
           "$PLUSHU_ROOT/nginx/http"/existing.*.conf.save
           "$PLUSHU_ROOT/nginx/http"/existing.*.conf)
         for existing_save in "${existing_saves[@]}"; do
-          printf 'http {\n'
+          printf 'http {'
           cat "$existing_save"
           printf '}\n'
         done
