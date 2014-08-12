@@ -53,7 +53,7 @@ setup_sudoers () {
         echo
         echo "Please post an issue, including which distribution you are"
         echo "installing on and which directories it includes, at:"
-        echo "https://github.com/plushu/plushu-nginx-vhost/issues"
+        echo "https://github.com/plushu/plushu-nginx/issues"
         echo
       fi
 
