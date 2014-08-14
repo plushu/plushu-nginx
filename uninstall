@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eo pipefail; [[ $PLUSHU_TRACE ]] && set -x
+set -eo pipefail; [[ -n "$PLUSHU_TRACE" ]] && set -x
 
 nginx_plushu_conf="include $PLUSHU_ROOT/nginx/nginx.conf;"
 
