@@ -41,8 +41,10 @@ setup_sudoers () {
     if fgrep -qx '#includedir /etc/sudoers.d' /etc/sudoers; then
       echo "/etc/sudoers includes /etc/sudoers.d... good."
       echo "Installing plushu-reload-nginx rule as a file in sudoers.d."
-      install -m0440 $templates_dir/sudoers/plushu-reload-nginx \
-        /etc/sudoers.d/plushu-reload-nginx
+      # Write the file in a umasked subshell
+      (umask 0440 && printf '%s\n' \
+        "plushu ALL=(ALL)NOPASSWD:`command -v nginx` -s reload" \
+        >/etc/sudoers.d/plushu-reload-nginx)
     else
       echo "Your /etc/sudoers doesn't include /etc/sudoers.d."
       included_dirs=`sed -n 's/^#includedir\s*//p' /etc/sudoers`
@@ -67,7 +69,7 @@ setup_sudoers () {
       echo "the relevant directive to reload Nginx, or add the line for"
       echo "the directive to /etc/sudoers directly:"
       echo
-      echo "%plushu ALL=(ALL)NOPASSWD:nginx -s reload"
+      echo "%plushu ALL=(ALL)NOPASSWD:`command -v nginx` -s reload"
       echo
     fi
   else
@@ -76,7 +78,7 @@ setup_sudoers () {
     echo "To create it, reinstall this plugin as root, or add"
     echo "this line to your sudoers configuration:"
     echo
-    echo "%plushu ALL=(ALL)NOPASSWD:nginx -s reload"
+    echo "%plushu ALL=(ALL)NOPASSWD:`command -v nginx` -s reload"
     echo
   fi
 }
