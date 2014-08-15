@@ -37,7 +37,7 @@ EOF
 }
 
 setup_sudoers () {
-  if [[ $EUID == 0 ]]; then
+  if [[ "$EUID" == 0 ]]; then
     if fgrep -qx '#includedir /etc/sudoers.d' /etc/sudoers; then
       echo "/etc/sudoers includes /etc/sudoers.d... good."
       echo "Installing plushu-reload-nginx rule as a file in sudoers.d."
@@ -233,7 +233,7 @@ eat_nginx_conf () {
 }
 setup_nginx_conf () {
   mkdir -p "$PLUSHU_ROOT/nginx/http"
-  if [[ $EUID == 0 ]]; then
+  if [[ "$EUID" == 0 ]]; then
     if [[ "$(</etc/nginx/nginx.conf)" != "$nginx_plushu_conf" ]]; then
       echo "Configuring Nginx to read from Plushu..."
       eat_nginx_conf
