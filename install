@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -eo pipefail; [[ -n "$PLUSHU_TRACE" ]] && set -x
 
-templates_dir=$PLUSHU_ROOT/plugins/$PLUSHU_PLUGIN_NAME/templates
-
 echo_install_information () {
   local distro=""
   if [[ -f /etc/os-release ]]; then
@@ -224,7 +222,7 @@ eat_nginx_conf () {
   done </etc/nginx/nginx.conf
 
   # Add an http block to our new conf
-  printf '%s\n' "http { include $PLUSHU_ROOT/nginx/http/*.conf; }" \
+  printf '%s\n' "http { include http/*.conf; }" \
     >>"$PLUSHU_ROOT/nginx/nginx.conf"
 
   # Overwrite the existing configuration (which we just ate)
