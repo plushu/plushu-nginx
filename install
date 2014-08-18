@@ -42,7 +42,7 @@ setup_sudoers () {
       echo "/etc/sudoers includes /etc/sudoers.d... good."
       echo "Installing plushu-reload-nginx rule as a file in sudoers.d."
       # Write the file in a umasked subshell
-      (umask 0440 && printf '%s\n' \
+      (umask 0226 && printf '%s\n' \
         "plushu ALL=(ALL)NOPASSWD:`command -v nginx` -s reload" \
         >/etc/sudoers.d/plushu-reload-nginx)
     else
