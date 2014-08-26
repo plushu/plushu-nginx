@@ -127,7 +127,7 @@ check_nginx_run_status () {
 
 nginx_plushu_conf="include $PLUSHU_ROOT/nginx/nginx.conf;"
 
-eat_nginx_conf () {
+copy_nginx_conf () {
   local http_depth=0
   local quote=
 
@@ -212,7 +212,7 @@ eat_nginx_conf () {
     fi
   }
 
-  # Parse every line of the existing nginx.conf
+  # Parse every line of the existing /etc/nginx/nginx.conf
   while read -r line; do
     if (( $http_depth > 0 )); then
       inside_http_block "$line"
@@ -224,17 +224,20 @@ eat_nginx_conf () {
   # Add an http block to our new conf
   printf '%s\n' "http { include http/*.conf; }" \
     >>"$PLUSHU_ROOT/nginx/nginx.conf"
-
-  # Overwrite the existing configuration (which we just ate)
-  # with one that includes the Plushu one
-  printf '%s\n' "$nginx_plushu_conf" >/etc/nginx/nginx.conf
 }
 setup_nginx_conf () {
   mkdir -p "$PLUSHU_ROOT/nginx/http"
   if [[ "$EUID" == 0 ]]; then
-    if [[ "$(</etc/nginx/nginx.conf)" != "$nginx_plushu_conf" ]]; then
-      echo "Configuring Nginx to read from Plushu..."
-      eat_nginx_conf
+    if [[ `readlink /etc/nginx` != "$PLUSHU_ROOT/nginx" &&
+      ! -e /etc/nginx.old ]]; then
+      if [[ ! -f "$PLUSHU_ROOT/nginx/nginx.conf" ]]; then
+        echo "Copying existing Nginx configuration..."
+        copy_nginx_conf
+      fi
+      # Replace the existing /etc/nginx
+      echo "Replacing existing Nginx configuration..."
+      mv /etc/nginx /etc/nginx.old
+      ln -s "$PLUSHU_ROOT/nginx" /etc/nginx
     fi
   else
     echo "plushu-nginx moves the Nginx configuration to the Plushu root so"
@@ -242,11 +245,9 @@ setup_nginx_conf () {
     echo "perform this replacement."
     echo
     echo "If you wish to integrate Plushu into your existing Nginx setup"
-    echo "rather than having Plushu control it, add this line to your"
-    echo "http block in /etc/nginx/nginx.conf:"
-    echo
-    echo "    include $PLUSHU_ROOT/nginx/http/*.conf;"
-    echo
+    echo "rather than having Plushu control it, you'll need to figure out a"
+    echo "way to include $PLUSHU_ROOT/nginx/http/*.conf in your configuration,"
+    echo "keeping in mind Plushu uses relative paths in its Nginx conf files."
   fi
 }
 
