@@ -8,7 +8,12 @@ if [[ "$EUID" == 0 ]]; then
   if [[ -f /etc/sudoers.d/plushu-reload-nginx ]]; then
     rm /etc/sudoers.d/plushu-reload-nginx
   fi
-  if [[ -h /etc/nginx && -d /etc/nginx.old ]]; then
+  if [[ `readlink /etc/nginx/ssl` == "$PLUSHU_ROOT/ssl" ]]; then
+    unlink /etc/nginx/ssl
+  fi
+  if [[ `readlink /etc/nginx` == "$PLUSHU_ROOT/nginx" &&
+    -d /etc/nginx.old ]]; then
+
     unlink /etc/nginx
     mv /etc/nginx.old /etc/nginx
   fi

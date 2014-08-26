@@ -238,6 +238,13 @@ setup_nginx_conf () {
       echo "Replacing existing Nginx configuration..."
       mv /etc/nginx /etc/nginx.old
       ln -s "$PLUSHU_ROOT/nginx" /etc/nginx
+
+      mkdir -p "$PLUSHU_ROOT/nginx/ssl"
+      chown plushu "$PLUSHU_ROOT/nginx/ssl"
+      if [[ ! -e "$PLUSHU_ROOT/nginx/ssl" ]]; then
+        echo "Symlinking SSL dir into Nginx configuration..."
+        ln -s "$PLUSHU_ROOT/ssl" "$PLUSHU_ROOT/nginx/ssl"
+      fi
     fi
   else
     echo "plushu-nginx moves the Nginx configuration to the Plushu root so"
