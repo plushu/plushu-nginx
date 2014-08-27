@@ -41,7 +41,7 @@ setup_sudoers () {
       echo "Installing plushu-reload-nginx rule as a file in sudoers.d."
       # Write the file in a umasked subshell
       (umask 0226 && printf '%s\n' \
-        "plushu ALL=(ALL)NOPASSWD:`command -v nginx` -s reload" \
+        "$PLUSHU_USER ALL=(ALL)NOPASSWD:`command -v nginx` -s reload" \
         >/etc/sudoers.d/plushu-reload-nginx)
     else
       echo "Your /etc/sudoers doesn't include /etc/sudoers.d."
@@ -67,7 +67,7 @@ setup_sudoers () {
       echo "the relevant directive to reload Nginx, or add the line for"
       echo "the directive to /etc/sudoers directly:"
       echo
-      echo "%plushu ALL=(ALL)NOPASSWD:`command -v nginx` -s reload"
+      echo "$PLUSHU_USER ALL=(ALL)NOPASSWD:`command -v nginx` -s reload"
       echo
     fi
   else
@@ -76,7 +76,7 @@ setup_sudoers () {
     echo "To create it, reinstall this plugin as root, or add"
     echo "this line to your sudoers configuration:"
     echo
-    echo "%plushu ALL=(ALL)NOPASSWD:`command -v nginx` -s reload"
+    echo "$PLUSHU_USER ALL=(ALL)NOPASSWD:`command -v nginx` -s reload"
     echo
   fi
 }
@@ -240,7 +240,7 @@ setup_nginx_conf () {
       ln -s "$PLUSHU_ROOT/nginx" /etc/nginx
 
       mkdir -p "$PLUSHU_ROOT/nginx/ssl"
-      chown plushu "$PLUSHU_ROOT/nginx/ssl"
+      chown "$PLUSHU_USER" "$PLUSHU_ROOT/nginx/ssl"
       if [[ ! -e "$PLUSHU_ROOT/nginx/ssl" ]]; then
         echo "Symlinking SSL dir into Nginx configuration..."
         ln -s "$PLUSHU_ROOT/ssl" "$PLUSHU_ROOT/nginx/ssl"
