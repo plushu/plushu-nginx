@@ -240,7 +240,7 @@ setup_nginx_conf () {
       ln -s "$PLUSHU_ROOT/nginx" /etc/nginx
 
       mkdir -p "$PLUSHU_ROOT/nginx/ssl"
-      chown "$PLUSHU_USER" "$PLUSHU_ROOT/nginx/ssl"
+      chown "$PLUSHU_USER:" "$PLUSHU_ROOT/nginx/ssl"
       if [[ ! -e "$PLUSHU_ROOT/nginx/ssl" ]]; then
         echo "Symlinking SSL dir into Nginx configuration..."
         ln -s "$PLUSHU_ROOT/ssl" "$PLUSHU_ROOT/nginx/ssl"
