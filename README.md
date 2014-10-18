@@ -2,6 +2,30 @@
 
 Plugin to integrate Plushu with Nginx
 
+## This plugin is (mostly) deprecated
+
+In general, it's easier to run daemons like Nginx as an encapsulated Docker
+container environment than it is to try to integrate into the configuration and
+quirks of a host distro's provided environment (as evidenced by the complex
+documentation below / volume of code around integrating host configuration in
+this plugin). For this reason, this plugin has been superseded for general use
+(in [Plusku][]) by the [plushu-nginx-container][] plugin.
+
+[Plusku]: https://github.com/plushu/plusku
+[plushu-nginx-container]: https://github.com/plushu/plushu-nginx-container
+
+The plushu-nginx-container plugin uses the same configuration files (as managed
+by other plugins) as this plugin does, and is drop-in compatible with this: the
+only difference is the mechanism by which the Nginx server is provided.
+
+This plugin should only be used to run Nginx if you *need* to integrate Plushu
+into an existing host Nginx setup (eg. you're setting it up alongsite static
+files being served by the distro's patched version of Nginx), or if you're
+running some kind of Plushu configuration that doesn't involve
+[plushu-docker][].
+
+[plushu-docker]: https://github.com/plushu/plushu-docker
+
 ## Installing
 
 Installation will take the original configuration from /etc/nginx/nginx.conf
