@@ -28,8 +28,8 @@ started.
 This plugin should only be used to run Nginx if you *need* to integrate Plushu
 into an existing host Nginx setup (eg. you're setting it up alongsite static
 files being served by the distro's patched version of Nginx), or if you're
-running some kind of Plushu configuration that doesn't involve plushu-docker.
-
+running some kind of Plushu configuration that doesn't involve plushu-docker
+(or any other framework that would allow you to run Nginx in a container).
 
 ## Installing
 
